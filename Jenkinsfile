@@ -2,9 +2,8 @@ pipeline {
     agent any
     
     tools {
-        // Load the SonarQube Scanner executable configured in Step 2
-        // NOTE: Replace 'SonarScanner' if you used a different name.
-        jenkinsScanner SonarScanner
+        // CORRECTION: Replaced 'jenkinsScanner' with the correct tool alias 'sonar-scanner'.
+        sonar-scanner 'SonarScanner' 
     }
 
     stages {
@@ -16,17 +15,13 @@ pipeline {
 
         stage('Build') {
             steps {
-                // Change to 'bat' for Windows Command Prompt compatibility
                 bat 'mvn clean install'
             }
         }
 
         stage('Static Code Analysis (SAST)') {
             steps {
-                // Recommended integration method: 'withSonarQubeEnv' automatically sets the URL and Token
-                withSonarQubeEnv('SonarQube-Local') { // Use the name from Step 1
-                    // The command is now simpler as Jenkins handles the Dsonar.host/login parameters
-                    // Changed 'sh' to 'bat' for Windows compatibility
+                withSonarQubeEnv('SonarQube-Local') { 
                     bat 'sonar-scanner -Dsonar.projectKey=my_project -Dsonar.sources=./src'
                 }
             }
@@ -34,13 +29,13 @@ pipeline {
 
         stage('Dependency Check') {
             steps {
-                // WARNING: 'sh' commands may fail for these non-Java tools on Windows
+                // Note: Ensure the 'dependency-check' command is globally available on Windows PATH.
                 bat 'dependency-check --project MyProject --scan ./ --format HTML --out dependency-check-report.html'
             }
         }
-
-        // ... (Remaining stages go here, using 'bat' for commands) ...
+        
+        // ... (Remaining stages) ...
     }
-
-    // ... (Post stage remains the same) ...
+    
+    // ... (Post stage) ...
 }
