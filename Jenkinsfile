@@ -3,8 +3,12 @@ pipeline {
 
     // --- GLOBAL TOOLS ---
     tools {
-        // MANDATORY FIX: Using the full, definitive syntax for the SonarQube Scanner tool.
-        tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+        // CORRECTION: The alias is the type itself.
+        // The syntax is: [Alias] [Label]
+        
+        // This is the correct structure for the SonarQube Scanner tool:
+        hudson.plugins.sonar.SonarRunnerInstallation 'SonarScanner' 
+        // NOTE: The name 'SonarScanner' must exactly match the label you set in Manage Jenkins -> Tools.
     }
 
     stages {
