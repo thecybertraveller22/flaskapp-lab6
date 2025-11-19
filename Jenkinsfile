@@ -1,61 +1,46 @@
 pipeline {
     agent any
     
-    // 1. Tools Section (From Image 3)
     tools {
-        // Make sure you named your Maven tool 'Maven' in Jenkins settings!
-        maven 'Maven'
-    }
-
-    // 2. Parameters Section (From Image 1)
-    parameters {
-        // I selected 'choice' instead of 'string' so you get a dropdown menu
-        choice(name: 'VERSION', choices: ['1.1.0', '1.2.0', '1.3.0'], description: 'Version to deploy')
-        booleanParam(name: 'executeTests', defaultValue: true, description: 'Run tests?')
-    }
-
-    // 3. Environment Variables (From Image 1)
-    environment {
-        NEW_VERSION = '1.3.0'
+        // Load the SonarQube Scanner executable configured in Step 2
+        // NOTE: Replace 'SonarScanner' if you used a different name.
+        jenkinsScanner SonarScanner
     }
 
     stages {
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/your-repository.git', branch: 'main'
+            }
+        }
+
         stage('Build') {
             steps {
-                echo 'Building Project'
-                
-                // Using the environment variable (From Image 3)
-                echo "Building version ${NEW_VERSION}"
-                
-                // Installing NVM (Changed 'sh' to 'bat' for Windows)
-                bat "nvm install"
+                // Change to 'bat' for Windows Command Prompt compatibility
+                bat 'mvn clean install'
             }
         }
-        
-        stage('Test') {
-            // 4. Conditional Execution (From Image 2)
-            // This stage ONLY runs if the checkbox 'executeTests' is checked
-            when {
-                expression { params.executeTests }
-            }
+
+        stage('Static Code Analysis (SAST)') {
             steps {
-                echo 'Testing Project'
+                // Recommended integration method: 'withSonarQubeEnv' automatically sets the URL and Token
+                withSonarQubeEnv('SonarQube-Local') { // Use the name from Step 1
+                    // The command is now simpler as Jenkins handles the Dsonar.host/login parameters
+                    // Changed 'sh' to 'bat' for Windows compatibility
+                    bat 'sonar-scanner -Dsonar.projectKey=my_project -Dsonar.sources=./src'
+                }
             }
         }
-        
-        stage('Deploy') {
+
+        stage('Dependency Check') {
             steps {
-                echo 'Deploying....'
+                // WARNING: 'sh' commands may fail for these non-Java tools on Windows
+                bat 'dependency-check --project MyProject --scan ./ --format HTML --out dependency-check-report.html'
             }
         }
+
+        // ... (Remaining stages go here, using 'bat' for commands) ...
     }
-    
-    post {
-        always {
-            echo 'Post build condition running'
-        }
-        failure {
-            echo 'Post action if build failed'
-        }
-    }
+
+    // ... (Post stage remains the same) ...
 }
