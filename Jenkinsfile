@@ -1,99 +1,64 @@
 pipeline {
     agent any
 
-    // --- GLOBAL TOOLS ---
-    tools {
-        // Use the full internal class name followed by parentheses for arguments:
-        hudson.plugins.sonar.SonarRunnerInstallation('SonarScanner')
+    environment {
+        PROJECT = "thecybertraveller22_flaskapp-lab6"
+        ORG = "thecybertraveller22"
     }
 
     stages {
-        stage('Checkout Code') {
+
+        stage('Checkout') {
             steps {
-                // IMPORTANT: Replace 'https://github.com/your-repository.git' with your actual repo URL
-                git url: 'https://github.com/your-repository.git', branch: 'main'
+                git branch: 'main', url: 'https://github.com/thecybertraveller22/flaskapp-lab6.git'
             }
         }
 
         stage('Build') {
             steps {
-                // Use 'bat' for Windows command compatibility
-                bat 'mvn clean install' 
+                echo "Build step..."
             }
         }
-
-        stage('Static Code Analysis (SAST)') {
+        stage('SonarCloud Analysis') {
             steps {
-                // RECOMMENDED: This step automatically injects sonar.host.url and sonar.login (API Token)
-                withSonarQubeEnv('SonarQube-Local') { 
-                    // The command is simpler now; Jenkins handles URL/Token injection.
-                    bat 'sonar-scanner -Dsonar.projectKey=my_project -Dsonar.sources=./src'
-                }
-            }
-        }
-
-        stage('Dependency Check') {
-            steps {
-                // Uses 'bat' for Windows compatibility
-                bat 'dependency-check --project MyProject --scan ./ --format HTML --out dependency-check-report.html'
-            }
-        }
-
-        stage('Container Security Scan') {
-            steps {
-                // WARNING: Trivy (and Docker) must be installed and accessible on your Windows PATH
-                bat 'trivy image myapp:latest' 
-            }
-        }
-
-        stage('Unit Tests') {
-            steps {
-                bat 'mvn test'
-            }
-        }
-
-        stage('Deploy to Staging') {
-            steps {
-                // WARNING: kubectl must be installed and configured on your Windows PATH
-                bat 'kubectl apply -f k8s-deployment.yaml'
-            }
-        }
-
-        stage('Security Gate') {
-            steps {
-                // Reads the dependency check report and aborts the pipeline if high risk is found
-                script {
-                    def hasVulnerabilities = readFile('dependency-check-report.html').contains('High')
-                    if (hasVulnerabilities) {
-                        error "Security vulnerabilities found. Aborting the pipeline!"
+                withCredentials([string(credentialsId: 'sonarcloud-token', variable: 'TOKEN')]) {
+                    withSonarQubeEnv('SonarCloud') {
+                        bat """
+                            ${tool 'SonarScanner'}\\bin\\sonar-scanner.bat ^
+                              -Dsonar.projectKey=thecybertraveller22_flaskapp-lab6 ^
+                              -Dsonar.organization=thecybertraveller22 ^
+                              -Dsonar.sources=. ^
+                              -Dsonar.host.url=https://sonarcloud.io ^
+                              -Dsonar.login=%TOKEN% ^
+                              -Dsonar.c.file.suffixes=- ^
+                              -Dsonar.cpp.file.suffixes=- ^
+                              -Dsonar.objc.file.suffixes=-
+                        """
                     }
                 }
             }
         }
 
-        stage('Deploy to Production') {
-            when {
-                branch 'main'
-            }
+
+        stage('Quality Gate') {
             steps {
-                // Only runs if security checks passed and branch is 'main'
-                bat 'kubectl apply -f k8s-prod-deployment.yaml'
+                timeout(time: 2, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+                        if (qg.status == 'NONE') {
+                            echo "Warning: No quality gate configured. Proceeding with build."
+                        } else if (qg.status != 'OK') {
+                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                        }
+                    }
+                }
             }
         }
-    }
 
-    post {
-        always {
-            // Archives reports regardless of success/failure
-            archiveArtifacts artifacts: 'dependency-check-report.html, sonar-report.html', allowEmptyArchive: true
-        }
-
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-
-        failure {
-            echo 'Pipeline failed!'
+        stage('Deploy') {
+            steps {
+                echo "Deployment step..."
+            }
         }
     }
 }
