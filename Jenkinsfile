@@ -1,8 +1,8 @@
 pipeline {
     agent any
 
-    // Lab 13 Contribution: Added Quality Gate stage - Syed Arham Ahmed (22i-1552) developer2
-    
+// Dev 1: Syed Arham - 22i-1552
+// Dev 2: Lab Partner - 22i--someone
 
     environment {
         PROJECT = "thecybertraveller22_flaskapp-lab6"
