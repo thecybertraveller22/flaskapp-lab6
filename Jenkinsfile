@@ -1,6 +1,9 @@
 pipeline {
     agent any
 
+    // Lab 13 Contribution: Added Quality Gate stage - Syed Arham Ahmed (22i-1552)
+    
+
     environment {
         PROJECT = "thecybertraveller22_flaskapp-lab6"
         ORG = "thecybertraveller22"
