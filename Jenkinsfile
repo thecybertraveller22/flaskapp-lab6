@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    // Lab 13 Contribution: Added Quality Gate stage - Syed Arham Ahmed (22i-1552)
+    // Lab 13 Contribution: Added Quality Gate stage - Syed Arham Ahmed (22i-1552) developer 1
     
 
     environment {
