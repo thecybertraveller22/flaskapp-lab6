@@ -10,7 +10,6 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                // 'checkout scm' is the correct way to pull the repo in a pipeline
                 checkout scm
             }
         }
@@ -30,9 +29,10 @@ pipeline {
         stage('Run Unit Tests') {
             steps {
                 echo 'Running tests...'
+                // This fix ensures exit code 5 (no tests found) doesn't stop the build
                 bat '''
                     call venv\\Scripts\\activate
-                    pytest || echo "No tests found"
+                    pytest || (if %errorlevel%==5 (exit 0) else (exit %errorlevel%))
                 '''
             }
         }
@@ -40,8 +40,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo 'Building Docker image...'
-                // Note: Windows uses %VAR% syntax in batch, but Jenkins variables 
-                // inside strings work with ${VAR}
                 bat "docker build -t ${DOCKER_IMAGE}:latest ."
             }
         }
@@ -49,7 +47,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo 'Deploying container...'
-                // Using 2>nul || exit 0 to prevent failure if container doesn't exist
                 bat """
                     docker stop ${CONTAINER_NAME} 2>nul || (exit 0)
                     docker rm ${CONTAINER_NAME} 2>nul || (exit 0)
@@ -60,6 +57,9 @@ pipeline {
     }
 
     post {
+        success {
+            echo "Pipeline completed! App available at http://localhost:5000"
+        }
         failure {
             echo "Pipeline failed. Check the console output above for the specific error."
         }
